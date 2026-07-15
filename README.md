@@ -389,7 +389,7 @@ Zero browser, zero DOM scraping. This app talks **directly to the SearchUnify an
 
 It answers the harder question in applied GenAI right now: *given open-ended, unstructured LLM output, how do you score factual correctness against ground truth — automatically, defensibly, and without an LLM just grading its own homework?*
 
-![Case fetched — API-based detail preview](Screenshots/Screenshot%20from%202026-07-15%2011-17-28.png)
+![Step 2 — Select Case (full grid)](Screenshot%20from%202026-07-15%2011-14-20.png)
 
 *Case #00001205 fetched directly via the Salesforce API — subject, status, priority, account, contact, comment count, and full description, no browser involved.*
 
