@@ -54,7 +54,7 @@ Drives the real Chrome extension via CDP, exactly as a support agent would exper
 ### Step 2 — Select Case
 Browse pre-created test cases or paste any Salesforce Lightning case URL.
 
-![Step 2 — Select Case (full grid)](Screenshot%20from%202026-07-15%2011-14-20.png)
+![Step 2 — Select Case (full grid)](Screenshot%20from%202026-07-15%2011-17-28.png)
 
 *Quick Load grid showing 12 pre-seeded test scenarios with tags and comment counts.*
 
