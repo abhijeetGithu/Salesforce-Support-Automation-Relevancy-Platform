@@ -20,7 +20,7 @@ The complete source code for this project is not publicly available as it contai
 
 For interview or verification purposes, a sanitized version of the project will be shared through the following Google Drive link:
 
-**Google Drive:** https://drive.google.com/your-link-here
+**Google Drive:** [https://drive.google.com/your-link-here](https://drive.google.com/file/d/1rnhCg1n9skXIoWnIEf9nTvqMf5tnLUVH/view?usp=sharing)
 
 > *The Drive link will be made available after the interview process or upon request for code verification.*
 
