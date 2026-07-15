@@ -22,7 +22,7 @@ For interview or verification purposes, a version of the project will be shared 
 
 **Google Drive:** [Drive Link](https://drive.google.com/file/d/1rnhCg1n9skXIoWnIEf9nTvqMf5tnLUVH/view?usp=sharing)
 
-> *This Drive link I will be made available for the interview process or upon request for code verification.*
+> *This Drive link I will makee available for the interview process or upon request for code verification.*
 
 ## What This Does
 
