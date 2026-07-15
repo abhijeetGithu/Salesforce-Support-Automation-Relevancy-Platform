@@ -13,7 +13,6 @@ An **LLM evaluation and QA platform** for the **SearchUnify "SU on the Side" (AI
 Both apps share one evaluation core (`backend/analyzer.py`) — a from-scratch **grounded LLM evaluation engine** built for exactly the kind of problem generative AI teams are hiring for right now: *scoring open-ended LLM output against ground truth, deterministically, with evidence, at scale.*
 
 ---
----
 
 ## Source Code
 
