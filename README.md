@@ -1,28 +1,43 @@
-# SearchUnify AI Agent QA Automation Suite
+# SearchUnify AI Agent QA & Relevancy Evaluation Suite
 
-An end-to-end automation and evaluation suite for testing the **SearchUnify "SU on the Side" (AI Agent Partner)** Chrome extension against live Salesforce Lightning support cases.
+An **LLM evaluation and QA platform** for the **SearchUnify "SU on the Side" (AI Agent Partner)** — a generative AI copilot embedded in Salesforce support workflows. This repo ships **two complementary applications** that answer the same question — *"is the AI actually right?"* — from two different angles:
 
-The system scrapes real Salesforce cases, reads what the SU extension's AI generated for each case, and uses OpenAI to score the relevancy, accuracy, and quality of the AI output across five distinct evaluation dimensions.
+| | [`backend/` + `frontend/`](#-app-1-functional-testing-suite-browser-automation) | [`api_app/`](#-app-2-relevancy-analysis-engine-api-based) |
+|---|---|---|
+| **Purpose** | End-to-end functional/UI testing of the live Chrome extension | Automated relevancy & hallucination evaluation at scale |
+| **Data source** | Browser automation (Playwright + Chrome DevTools Protocol) | Direct REST/SSE API integration (SearchUnify + Salesforce) |
+| **Ground truth** | Scraped Salesforce Lightning DOM | Salesforce SOQL + OAuth2, queried directly |
+| **Best for** | Regression-testing the extension's actual UI/UX end-to-end | CI-friendly, headless, scalable LLM-output grading |
+| **Core technique** | CDP-driven DOM scraping & UI interaction | **LLM-as-a-Judge** + **claim decomposition/verification** (hallucination-resistant scoring) |
+
+Both apps share one evaluation core (`backend/analyzer.py`) — a from-scratch **grounded LLM evaluation engine** built for exactly the kind of problem generative AI teams are hiring for right now: *scoring open-ended LLM output against ground truth, deterministically, with evidence, at scale.*
 
 ---
 
 ## What This Does
 
-When a support agent opens a Salesforce case, the SearchUnify Chrome extension provides AI-generated assistance:
+When a support agent opens a Salesforce case, the SearchUnify AI Agent Partner generates several pieces of AI output, each independently evaluated:
 - **Opening Assessment** — problem statement, root cause hypothesis, what's been tried, next steps
 - **Draft Response** — a suggested reply to the customer
 - **Case Summary** — a concise summary of the case
 - **Customer Sentiment** — how the customer is feeling throughout the conversation
 - **Case Timeline** — chronological breakdown of events
+- **Account Health** *(`api_app` only)* — RAG (red/amber/green) status derived from account-level Salesforce metrics
+- **Escalation Risk** *(`api_app` only)* — a weighted 0–100% risk band combining frustration signal, SLA breach data, and LLM-judged case severity/complexity
 
-This tool automatically:
-1. Connects to your already-running Chrome instance (where you're logged into Salesforce)
-2. Scrapes the full case — subject, fields, feed of comments (including lazy-loaded and collapsed posts)
-3. Reads what the SU extension's AI actually generated for each of the five outputs
-4. Scores each output using OpenAI GPT — checking relevancy, accuracy, hallucination, tone, and completeness
-5. Renders a detailed scored HTML report
+Both apps:
+1. Retrieve the ground-truth case record (via browser scrape or direct API/SOQL)
+2. Retrieve what the AI actually generated for each dimension
+3. Score each output with an LLM evaluation pipeline — checking relevancy, factual accuracy, hallucination, tone, and completeness
+4. Render scored, exportable reports (HTML/CSV)
 
 ---
+
+# 🧭 App 1: Functional Testing Suite (Browser Automation)
+
+**Location:** [`backend/`](backend/) + [`frontend/`](frontend/)
+
+Drives the real Chrome extension via CDP, exactly as a support agent would experience it — the gold standard for catching UI regressions, broken selectors, and behavior that only shows up in the actual rendered product.
 
 ## Screenshots
 
@@ -32,15 +47,6 @@ Browse pre-created test cases or paste any Salesforce Lightning case URL.
 ![Step 2 — Select Case (full grid)](Screenshot%20from%202026-07-15%2011-14-20.png)
 
 *Quick Load grid showing 12 pre-seeded test scenarios with tags and comment counts.*
-
----
-
-### Step 2 — Case Fetched (API Edition)
-After clicking **Fetch Case**, the case details are shown inline before analysis begins.
-
-![Case fetched — detail preview](Screenshot%20from%202026-07-15%2011-17-28.png)
-
-*Case #00001205 loaded — shows subject, status, priority, account, contact, comment count, and full description.*
 
 ---
 
@@ -283,16 +289,17 @@ Specifically designed to challenge the sentiment analysis:
 
 ```
 AH-automation-suse/
-├── backend/
-│   ├── main.py           # FastAPI app, all API endpoints
-│   ├── analyzer.py       # OpenAI scoring engine, all 5 evaluation dimensions
-│   ├── scraper.py        # Playwright/CDP Salesforce scraper
+├── backend/                      # ── App 1: browser-automation functional test suite ──
+│   ├── main.py                   # FastAPI app, all API endpoints
+│   ├── analyzer.py               # Shared evaluation engine — LLM-as-judge + claim
+│   │                             # decomposition/verification, all 7 dimensions
+│   │                             # (imported directly by App 2 via importlib)
+│   ├── scraper.py                # Playwright/CDP Salesforce DOM scraper
 │   └── requirements.txt
 │
-├── frontend/
+├── frontend/                     # ── App 1 UI (Next.js, port 3001) ──
 │   └── src/
-│       ├── app/
-│       │   └── page.tsx          # Main page, Step state machine
+│       ├── app/page.tsx          # Main page, Step state machine
 │       ├── components/
 │       │   ├── AuthStep.tsx      # Chrome + Salesforce connection
 │       │   ├── CaseStep.tsx      # Case URL input + quick-select
@@ -303,14 +310,30 @@ AH-automation-suse/
 │           ├── testCases.ts      # Pre-seeded case IDs for quick-select
 │           └── exportReport.ts   # HTML report export
 │
+├── api_app/                       # ── App 2: API-based relevancy analysis engine ──
+│   ├── backend/
+│   │   ├── main.py               # FastAPI app (port 8001), 7 evaluation endpoints
+│   │   ├── su_client.py          # SearchUnify AI Agent Partner REST/SSE client
+│   │   ├── sf_client.py          # Salesforce OAuth2 + SOQL ground-truth client
+│   │   ├── analyzer.py           # Thin re-export shim → backend/analyzer.py
+│   │   ├── langfuse_tracer.py    # LLM observability — traces every OpenAI call
+│   │   └── requirements.txt
+│   └── frontend/
+│       └── src/
+│           ├── app/page.tsx      # connecting → home → analysis state machine
+│           └── components/
+│               ├── CaseStep.tsx      # Case lookup by number
+│               ├── AnalysisStep.tsx  # Renders all 7 dimensions, method toggle
+│               └── BatchStep.tsx     # Sequential multi-case batch analysis
+│
 ├── create_case_with_comments.py  # Single test case creator
 ├── create_18_cases.py            # 18 edge-scenario cases
 ├── create_sentiment_cases.py     # 6 multi-sentiment-arc cases
 ├── run_4case_full_report.py      # Batch pipeline for 10 cases
 ├── run_sentiment_cases_report.py # Batch pipeline for 6 sentiment cases
-├── su_extension_helper.py        # SU extension CDP interaction helper
-├── su_api_client.py              # Direct SearchUnify API client
-└── .env                          # OPENAI_API_KEY (not committed)
+├── su_extension_helper.py        # SU extension CDP interaction helper (App 1)
+├── su_api_client.py              # Standalone direct SearchUnify API client (scripts)
+└── .env                          # API keys / OAuth secrets (not committed)
 ```
 
 ---
@@ -348,14 +371,129 @@ The Salesforce Lightning feed has several non-obvious behaviours documented in `
 
 ---
 
+# 🧠 App 2: Relevancy Analysis Engine (API-Based)
+
+**Location:** [`api_app/backend/`](api_app/backend/) + [`api_app/frontend/`](api_app/frontend/)
+
+Zero browser, zero DOM scraping. This app talks **directly to the SearchUnify and Salesforce APIs**, making it fast, headless, and CI-friendly — the shape you'd want for continuously grading a production LLM feature at scale rather than clicking through a UI.
+
+It answers the harder question in applied GenAI right now: *given open-ended, unstructured LLM output, how do you score factual correctness against ground truth — automatically, defensibly, and without an LLM just grading its own homework?*
+
+![Case fetched — API-based detail preview](Screenshots/Screenshot%20from%202026-07-15%2011-17-28.png)
+
+*Case #00001205 fetched directly via the Salesforce API — subject, status, priority, account, contact, comment count, and full description, no browser involved.*
+
+### Data integrations
+
+| Integration | Client | Details |
+|---|---|---|
+| **SearchUnify AI Agent Partner API** | `su_client.py` | REST + **Server-Sent Events (SSE)** streaming against `POST /v1/sse/ai-agent-partner`. Bearer-token auth (`X-CRM-Platform`, `X-Instance-Url`, `X-UUX-App-Id`, per-request `X-Request-Id`). One streaming action (`greeting`) drives the Opening Assessment; a `chat` action with dimension-specific system prompts drives Draft Response, Case Summary, Timeline, Sentiment, Account Health, and Escalation Risk. |
+| **Salesforce** | `sf_client.py` | OAuth2 **client-credentials** flow (token cached, auto-refreshed on `401`) + **SOQL** against `Case`, `FeedItem`, `FeedComment`, `CaseComment`, `EmailMessage`, and `CaseMilestone` — merged into the same chronological case-record shape the browser scraper produces, so both apps share one evaluation contract. |
+
+### The Evaluation Engine — grounded LLM-as-a-Judge
+
+The scoring core (shared with App 1, via `backend/analyzer.py`) exposes **two selectable evaluation methods** per request, controlled by a `method` parameter (`"llm"` | `"claim"`):
+
+**1. `"llm"` — Single-call LLM-as-a-Judge**
+One structured, JSON-mode chat completion scores the output directly against the case context — fast, simple, the industry-standard baseline for LLM evaluation pipelines.
+
+**2. `"claim"` (default) — Decompose-Verify: a hallucination-resistant, evidence-grounded pipeline**
+
+Rather than trusting a single LLM verdict, this runs a 4-stage **claim decomposition & verification** technique — the same family of methods used in modern factuality-benchmarking research (e.g. FActScore-style atomic fact-checking):
+
+1. **Extract** — the AI's output is decomposed into atomic `factual_assertion` vs. `judgment` claims (temperature `0.0` for determinism).
+2. **Verify** — every factual claim is independently checked against the case record and labeled `SUPPORTED` / `CONTRADICTED` / `NOT_FOUND`, each requiring a **quoted evidence span** — claims are shuffled first to reduce positional/order bias.
+3. **Keyfacts & Coverage** — a second, *assessment-blind* pass extracts the case's key facts independently, then measures whether the AI's output actually covered them (a recall/completeness metric, decoupled from the hallucination check).
+4. **Reverify** — a second-pass judge re-examines every flagged claim, requiring a quotable span before it counts as a confirmed `HALLUCINATION` — this materially cuts false-positive hallucination flags and reclassifies weak flags as `RECOVERED`.
+
+The final score is **arithmetic, not LLM-emitted** — every point is traceable to a specific claim and its supporting evidence:
+
+```
+score = 10 × faithfulness × (0.5 + 0.5 × coverage) − contradiction_penalty
+```
+
+This is the difference between "an LLM said it's an 8/10" and "here are the 11 claims we checked, the 2 we couldn't verify, and the evidence for each" — auditable, explainable AI evaluation rather than a black-box score.
+
+### Structured output & reliability engineering
+
+- **JSON-mode structured outputs** (`response_format={"type": "json_object"}`) on every OpenAI call — no brittle regex/markdown parsing of LLM responses.
+- Model-aware **temperature handling** — reasoning models (GPT-5 / o-series) reject non-default temperature, so it's conditionally omitted per model family.
+- **Ground-truth-then-judge pattern** for the two most numeric dimensions:
+  - **Account Health** — a deterministic RAG (red/amber/green) status is computed *first* from real Salesforce metrics (open case count, critical/high severity count, SLA-violation count, 90-day escalation rate), and the LLM is then graded against that verified baseline — not against its own opinion.
+  - **Escalation Risk** — combines a pre-computed frustration score and an SLA-breach score with an LLM-judged severity/complexity rating into a weighted 0–100% risk band (Low/Medium/High), including a "resolution dampener" rule that only trusts the customer's *latest* message when deciding if a risk has actually been resolved.
+- **Full observability** — `langfuse_tracer.py` transparently instruments every OpenAI call as a nested Langfuse **trace → span → generation**, using `contextvars` so concurrent async requests each track their own trace safely. Full prompt/response/token-usage visibility with zero changes to the evaluation logic itself — a production-grade LLM-ops observability pattern.
+
+### Evaluation dimensions (7 total)
+
+| Dimension | What's measured |
+|---|---|
+| Opening Assessment | 7 weighted sections (problem statement, classification, root cause, etc.) |
+| Draft Response | Relevancy, accuracy, tone, completeness, case alignment |
+| Case Summary | Relevancy, accuracy, completeness, current-state accuracy, consistency |
+| Customer Sentiment | Sentiment-label accuracy vs. case tone |
+| Case Timeline | Chronological accuracy and completeness |
+| **Account Health** | RAG status vs. deterministic Salesforce-derived ground truth |
+| **Escalation Risk** | Weighted risk-band accuracy, reasoning quality, coverage, hallucination check |
+
+### App 2 API Endpoints
+
+All endpoints run on port `8001` under `/api/`. Every analysis endpoint accepts `model` (default `gpt-5-mini`) and `method` (`"llm"` | `"claim"`) in the request body.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Liveness check |
+| GET | `/connection/check` | Verifies Salesforce OAuth token + SearchUnify API reachability |
+| POST | `/case/fetch` | Fetches case record directly via Salesforce SOQL (no browser) |
+| POST | `/analysis/run` | Scores Opening Assessment |
+| POST | `/analysis/draft-response` | Scores Draft Response |
+| POST | `/analysis/case-summary` | Scores Case Summary |
+| POST | `/analysis/customer-sentiment` | Scores Customer Sentiment |
+| POST | `/analysis/case-timeline` | Scores Case Timeline |
+| POST | `/analysis/account-health` | RAG-status ground truth vs. LLM evaluation |
+| POST | `/analysis/escalation-risk` | Weighted risk-band scoring vs. LLM evaluation |
+
+### Running App 2
+
+```bash
+cd api_app/backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+
+cd api_app/frontend
+npm install
+npm run dev
+```
+
+Configure `SU_ENDPOINT`, `SU_OPAQUE_TOKEN`, Salesforce OAuth2 client credentials, and (optionally) `LANGFUSE_*` keys — see [Environment Variables](#environment-variables).
+
+The frontend flow (`connecting → home → analysis`) lets you toggle the evaluation `method` (**LLM Judge** vs. **Decompose + Verify**) per run, supports single-case and **batch** analysis, and warns if cached results were scored with a different method than currently selected.
+
+---
+
 ## Environment Variables
+
+**Shared (both apps)**
 
 | Variable | Required | Description |
 |---|---|---|
 | `OPENAI_API_KEY` | Yes | Your OpenAI API key |
 | `OPENAI_MODEL` | No | Model to use (default: `gpt-5-mini`) |
 
-Create a `.env` file in the **repo root** (not inside `backend/`). The backend loads it from one level up.
+**App 2 only (`api_app/`) — API-based integrations**
+
+| Variable | Required | Description |
+|---|---|---|
+| `SU_ENDPOINT` | No | SearchUnify AI Agent Partner API base URL (default: `https://feature4.searchunify.com/unify`) |
+| `SU_OPAQUE_TOKEN` | Yes | Bearer token for SearchUnify API auth |
+| `SU_UID` | Yes | SearchUnify user/agent identifier |
+| `SU_AGENT_NAME` | No | Agent display name sent to the API (default: `Kanav`) |
+| `SF_CLIENT_ID` / `SF_CLIENT_SECRET` | Yes | Salesforce Connected App OAuth2 client-credentials |
+| `SF_INSTANCE_URL` | Yes | Salesforce instance base URL |
+| `SF_API_VERSION` | No | Salesforce REST API version (default: `v66.0`) |
+| `LF_PUBLIC_KEY` / `LF_SECRET_KEY` | No | [Langfuse](https://langfuse.com) keys — enables full LLM tracing/observability |
+| `LF_HOST` | No | Langfuse host (default: `https://langfuse.searchunify.com`) |
+
+Create a `.env` file in the **repo root** (not inside `backend/` or `api_app/backend/`). Both backends load it from one level up.
 
 ---
 
@@ -373,10 +511,16 @@ Create a `.env` file in the **repo root** (not inside `backend/`). The backend l
 
 ## Known Limitations
 
+**App 1 (browser automation)**
 - Chrome must be pre-running with CDP flags — the app cannot start Chrome from scratch without the correct flags
 - Case scraping takes ~90 seconds due to Salesforce Lightning's lazy-loading feed
 - The Playwright executor uses `max_workers=1` — Playwright calls cannot be parallelized
 - Case 1202 (one of the 10 batch cases) intermittently times out due to SU API latency on the draft response step
+
+**App 2 (API-based)**
+- Batch analysis runs cases **sequentially**, not in parallel (no `Promise.all` in the frontend batch loop)
+- Requires valid SearchUnify API credentials and a Salesforce Connected App configured for OAuth2 client-credentials — not usable without backend access to both systems
+- The `"claim"` (Decompose-Verify) method issues several more LLM calls per evaluation than `"llm"` mode — higher latency and token cost in exchange for evidence-grounded, hallucination-resistant scoring
 
 ---
 
@@ -386,19 +530,9 @@ Create a `.env` file in the **repo root** (not inside `backend/`). The backend l
 |---|---|
 | Frontend | Next.js 14, React 18, Tailwind CSS (dark theme) |
 | Backend | FastAPI, Python 3.11, Uvicorn |
-| Browser Automation | Playwright (sync API, CDP mode) |
-| AI Scoring | OpenAI GPT (configurable model) |
-| Salesforce Integration | REST API + Chatter API + CDP DOM scraping |
-
-
----
-
-## Source Code
-
-The complete source code for this project is not publicly available as it contains company-specific and proprietary implementation details.
-
-For interview or verification purposes, a sanitized version of the project will be shared through the following Google Drive link:
-
-**Google Drive:** https://drive.google.com/file/d/1rnhCg1n9skXIoWnIEf9nTvqMf5tnLUVH/view?usp=sharing
-
-> *The Drive link will be made available after the interview process or upon request for code verification.*
+| Browser Automation *(App 1)* | Playwright (sync API, Chrome DevTools Protocol) |
+| API Integration *(App 2)* | REST + Server-Sent Events (SSE) streaming, OAuth2 client-credentials |
+| AI Evaluation | OpenAI GPT (configurable model) — **LLM-as-a-Judge** & **claim decomposition/verification** (grounded, hallucination-resistant scoring) |
+| Structured Output | OpenAI JSON-mode (`response_format=json_object`) — schema-reliable LLM responses |
+| Observability *(App 2)* | [Langfuse](https://langfuse.com) — full trace/span/generation tracking per analysis run |
+| Salesforce Integration | REST API + Chatter API + CDP DOM scraping *(App 1)*; OAuth2 + SOQL *(App 2)* |
