@@ -13,6 +13,17 @@ An **LLM evaluation and QA platform** for the **SearchUnify "SU on the Side" (AI
 Both apps share one evaluation core (`backend/analyzer.py`) — a from-scratch **grounded LLM evaluation engine** built for exactly the kind of problem generative AI teams are hiring for right now: *scoring open-ended LLM output against ground truth, deterministically, with evidence, at scale.*
 
 ---
+---
+
+## Source Code
+
+The complete source code for this project is not publicly available as it contains company-specific and proprietary implementation details.
+
+For interview or verification purposes, a sanitized version of the project will be shared through the following Google Drive link:
+
+**Google Drive:** https://drive.google.com/your-link-here
+
+> *The Drive link will be made available after the interview process or upon request for code verification.*
 
 ## What This Does
 
