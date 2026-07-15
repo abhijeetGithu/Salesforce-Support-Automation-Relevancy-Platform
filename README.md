@@ -29,7 +29,7 @@ This tool automatically:
 ### Step 2 — Select Case
 Browse pre-created test cases or paste any Salesforce Lightning case URL.
 
-![Step 2 — Select Case (full grid)](Screenshots/Screenshot%20from%202026-07-15%2011-14-20.png)
+![Step 2 — Select Case (full grid)](Screenshot%20from%202026-07-15%2011-14-20.png)
 
 *Quick Load grid showing 12 pre-seeded test scenarios with tags and comment counts.*
 
@@ -38,7 +38,7 @@ Browse pre-created test cases or paste any Salesforce Lightning case URL.
 ### Step 2 — Case Fetched (API Edition)
 After clicking **Fetch Case**, the case details are shown inline before analysis begins.
 
-![Case fetched — detail preview](Screenshots/Screenshot%20from%202026-07-15%2011-17-28.png)
+![Case fetched — detail preview](Screenshot%20from%202026-07-15%2011-17-28.png)
 
 *Case #00001205 loaded — shows subject, status, priority, account, contact, comment count, and full description.*
 
@@ -47,7 +47,7 @@ After clicking **Fetch Case**, the case details are shown inline before analysis
 ### Step 3 — Analysis Results (Opening Assessment)
 The scored breakdown for the Opening Assessment across all 7 sections.
 
-![Analysis results — Opening Assessment](Screenshots/Screenshot%20from%202026-07-15%2011-21-35.png)
+![Analysis results — Opening Assessment](Screenshot%20from%202026-07-15%2011-21-35.png)
 
 *Case #00001205 scored 8.6 (Strong / PASS). Each section shows weighted score, verdict, and reasoning. Export buttons on the right generate HTML or CSV reports.*
 
@@ -56,7 +56,7 @@ The scored breakdown for the Opening Assessment across all 7 sections.
 ### Batch Report — Multi-Case Analysis
 The generated HTML report covering multiple cases at once.
 
-![Multi-Case Analysis Report](Screenshots/Screenshot%20from%202026-07-15%2011-12-31.png)
+![Multi-Case Analysis Report](Screenshot%20from%202026-07-15%2011-12-31.png)
 
 *5-case report: overall score 8.1/10, 4 PASS, 1 PARTIAL. Each case is expandable with full dimension breakdown.*
 
